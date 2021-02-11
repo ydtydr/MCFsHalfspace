@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH -J mmh2_2
-#SBATCH -o mmh2_2.o%j
-#SBATCH -e mmh2_2.o%j
+#SBATCH -J mammal
+#SBATCH -o mammal.o%j
+#SBATCH -e mammal.o%j
 #SBATCH -N 1
 #SBATCH -n 2
 #SBATCH --mem=2000
@@ -11,6 +11,7 @@
 python3 embed.py \
        -dim 2 \
        -com_n 1 \
+       -dscale 2.0 \
        -lr 0.3 \
        -epochs 1000 \
        -negs 50 \
@@ -21,4 +22,4 @@ python3 embed.py \
        -batchsize 10 \
        -eval_each 20 \
        -sparse \
-       -train_threads 2
+       -train_threads 1

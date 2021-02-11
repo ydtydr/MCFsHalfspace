@@ -18,6 +18,10 @@ from hype.LTiling_rsgd import LTilingRSGDManifold
 from hype.NLTiling_rsgd import NLTilingRSGDManifold
 from hype.LTiling_sgd import LTilingSGDManifold
 from hype.HTiling_rsgd import HTilingRSGDManifold
+from hype.Halfspace import HalfspaceManifold
+from hype.MCs_Halfspace import MCsHalfspaceManifold
+from hype.xMCs_Halfspace import xMCsHalfspaceManifold
+
 import sys
 import json
 import torch.multiprocessing as mp
@@ -32,12 +36,14 @@ MANIFOLDS = {
     'Euclidean': EuclideanManifold,
     'Poincare': PoincareManifold,
     'Lorentz': LorentzManifold,
-    'Halfspace': HalfspaceManifold,
     'NLorentz': NLorentzManifold,
     'LTiling_rsgd': LTilingRSGDManifold,
     'NLTiling_rsgd': NLTilingRSGDManifold,
     'LTiling_sgd': LTilingSGDManifold,
-    'HTiling_rsgd': HTilingRSGDManifold
+    'HTiling_rsgd': HTilingRSGDManifold,
+    'Halfspace': HalfspaceManifold,
+    'MCsHalfspace': MCsHalfspaceManifold,
+    'xMCsHalfspace': xMCsHalfspaceManifold
 }
 
 
@@ -60,6 +66,8 @@ def main():
                         help='Embedding dimension')
     parser.add_argument('-com_n', type=int, default=2,
                         help='Embedding components number')
+    parser.add_argument('-dscale', type=float, default=1.0,
+                        help='multiply a scale to the distance')
     parser.add_argument('-manifold', type=str, default='lorentz',
                         choices=MANIFOLDS.keys(), help='Embedding manifold')
     parser.add_argument('-lr', type=float, default=1000,
@@ -116,8 +124,8 @@ def main():
     # set default tensor type
     th.set_default_tensor_type('torch.DoubleTensor')####FloatTensor DoubleTensor
     # set device
-    # device = th.device(f'cuda:{opt.gpu}' if opt.gpu >= 0 else 'cpu')
-    device = th.device('cpu')
+    device = th.device(f'cuda:{opt.gpu}' if opt.gpu >= 0 else 'cpu')
+#     device = th.device('cpu')
 
     # select manifold to optimize on
     manifold = MANIFOLDS[opt.manifold](debug=opt.debug, max_norm=opt.maxnorm, com_n=opt.com_n)
@@ -176,7 +184,7 @@ def main():
                 threads[-1].start()
             [t.join() for t in threads]
         else:
-            train.train(device, model, data, optimizer, opt, log, progress=not opt.quiet)
+            train.train(0, device, model, data, optimizer, opt, log, progress=not opt.quiet)
     else:
         model = th.load(opt.eval_embedding, map_location='cpu')['embeddings']
 

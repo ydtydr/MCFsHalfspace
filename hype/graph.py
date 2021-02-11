@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-# Copyright (c) 2018-present, Facebook, Inc.
-# All rights reserved.
-#
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
 
 from collections import defaultdict as ddict
 import pandas
@@ -86,6 +81,13 @@ class Embedding(nn.Module):
         self.nobjects = size
         self.manifold = manifold
         self.lt = nn.Embedding(size, com_n*dim, sparse=sparse)
+        if 'MCs' in str(manifold):
+            if 'xMCs' not in str(manifold):
+                self.lt = nn.Embedding(size, com_n*dim, sparse=sparse)
+            else:
+                self.lt = nn.Embedding(size, com_n*(dim-1)+1, sparse=sparse)
+        else:
+            self.lt = nn.Embedding(size, dim, sparse=sparse)
         ############ add this line to store integer matrix
         if 'LTiling' in str(manifold):
             if 'N' in str(manifold):

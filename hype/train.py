@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-# Copyright (c) 2018-present, Facebook, Inc.
-# All rights reserved.
-#
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
 
 import torch as th
 import numpy as np
@@ -15,12 +10,15 @@ from hype.graph import eval_reconstruction
 from hype.Euclidean import EuclideanManifold
 from hype.Poincare import PoincareManifold
 from hype.Lorentz import LorentzManifold
-# from hype.Halfspace import HalfspaceManifold
 from hype.NLorentz import NLorentzManifold
 from hype.LTiling_rsgd import LTilingRSGDManifold
 from hype.NLTiling_rsgd import NLTilingRSGDManifold
 from hype.LTiling_sgd import LTilingSGDManifold
 from hype.HTiling_rsgd import HTilingRSGDManifold
+from hype.Halfspace import HalfspaceManifold
+from hype.MCs_Halfspace import MCsHalfspaceManifold
+from hype.xMCs_Halfspace import xMCsHalfspaceManifold
+
 # import matplotlib
 # matplotlib.use('Agg')
 # import matplotlib.pyplot as plt
@@ -29,12 +27,14 @@ MANIFOLDS = {
     'Euclidean': EuclideanManifold,
     'Poincare': PoincareManifold,
     'Lorentz': LorentzManifold,
-    'Halfspace': HalfspaceManifold,
     'NLorentz': NLorentzManifold,
     'LTiling_rsgd': LTilingRSGDManifold,
     'NLTiling_rsgd': NLTilingRSGDManifold,
     'LTiling_sgd': LTilingSGDManifold,
-    'HTiling_rsgd': HTilingRSGDManifold
+    'HTiling_rsgd': HTilingRSGDManifold,
+    'Halfspace': HalfspaceManifold,
+    'MCsHalfspace': MCsHalfspaceManifold,
+    'xMCsHalfspace': xMCsHalfspaceManifold
 }
 
 
@@ -163,7 +163,7 @@ def train(
                 counts = counts.double().unsqueeze(-1)
 
             optimizer.zero_grad()
-            preds = model(inputs)
+            preds = model(inputs) * opt.dscale
 
             loss = model.loss(preds, targets, size_average=True)
             loss.backward()
