@@ -42,7 +42,7 @@ class xMCsHalfspaceManifold(Manifold):
         return th.cat([u, v.unsqueeze(-1)], dim=-1)
 
     def distance(self, u, v):
-        dis = xMCsHalfspaceManifold.apply(u, v, self.com_n)
+        dis = xMCsHalfspaceDistance.apply(u, v, self.com_n)
         return dis
 
     def pnorm(self, u):
@@ -138,7 +138,7 @@ class xMCsHalfspaceManifold(Manifold):
         else:
             raise NotImplementedError
 
-class xMCsHalfspaceManifold(Function):
+class xMCsHalfspaceDistance(Function):
     @staticmethod
     def forward(self, u, v, com_n, myeps = 0.0):
         self.com_n = com_n

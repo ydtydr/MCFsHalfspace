@@ -44,7 +44,7 @@ class MCsHalfspaceManifold(Manifold):
         return th.cat([u, v.unsqueeze(-1)], dim=-1)
 
     def distance(self, u, v):
-        dis = MCsHalfspaceManifold.apply(u, v, self.com_n)
+        dis = MCsHalfspaceDistance.apply(u, v, self.com_n)
         return dis
 
     def pnorm(self, u):
@@ -63,7 +63,6 @@ class MCsHalfspaceManifold(Manifold):
         d = w.size(-1)//self.com_n
         ############
         w.data[...,:d-1].uniform_(-irange, irange)
-        w.data[...,d-1:-1].zero_()
         w.data[...,-self.com_n] = 1.0 + irange * 2 * (th.rand_like(w[...,-1])-0.5)
         ############
 #         iw = th.load('/HalfspaceTiling/hype/icml_mmiw_h2d.pt').data
@@ -149,7 +148,7 @@ class MCsHalfspaceManifold(Manifold):
         else:
             raise NotImplementedError
 
-class MCsHalfspaceManifold(Function):
+class MCsHalfspaceDistance(Function):
     @staticmethod
     def forward(self, u, v, com_n, myeps = 0.0):
         self.com_n = com_n

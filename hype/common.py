@@ -70,8 +70,8 @@ def Renormalize(x, n, m):
     for i in range(m-1, 0, -1):
         s, rough_x_val = Two_Sum(x[..., (i-1)*n:i*n], s)### b*n
         rough_x.append(rough_x_val) ## in increasing magnitude here
-    normalized_x = th.zeros(x.size(0),(m+2)*n)#.double()
-    if th.cuda.is_available():
+    normalized_x = th.zeros(x.size(0),(m+2)*n)
+    if x.is_cuda:
         normalized_x = normalized_x.cuda()
     for i in range(1, m, 1):
         s, e = Two_Sum(s, rough_x[-i])### b*n

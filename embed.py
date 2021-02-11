@@ -88,7 +88,7 @@ def main():
                         help='Run evaluation every n-th epoch')
     parser.add_argument('-debug', action='store_true', default=False,
                         help='Print debuggin output')
-    parser.add_argument('-gpu', default=-1, type=int,
+    parser.add_argument('-gpu', default=0, type=int,
                         help='Which GPU to run on (-1 for no gpu)')
     parser.add_argument('-sym', action='store_true', default=False,
                         help='Symmetrize dataset')

@@ -13,11 +13,11 @@ python3 embed.py \
        -com_n 1 \
        -dscale 2.0 \
        -lr 0.3 \
-       -epochs 1000 \
+       -epochs 10 \
        -negs 50 \
        -burnin 20 \
        -ndproc 4 \
-       -manifold Halfspace \
+       -manifold xMCsHalfspace \
        -dset wordnet/mammal_closure.csv \
        -batchsize 10 \
        -eval_each 20 \

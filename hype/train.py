@@ -138,6 +138,7 @@ def train(
 
     LOSS = np.zeros(opt.epochs)        
     for epoch in range(opt.epoch_start, opt.epochs):
+        data_index = 0
         print(th.abs(model.lt.weight.data).max().item())
         
         epoch_loss.fill_(0)
@@ -155,6 +156,8 @@ def train(
 
             inputs = inputs.to(device)
             targets = targets.to(device)
+            if data_index <= 5 and epoch==0:
+                print(thread_id, i_batch, 'before update', inputs[0][:3], model.lt.weight.data[inputs[0][:3]])
 
             # count occurrences of objects in batch
             if hasattr(opt, 'asgd') and opt.asgd:
@@ -168,6 +171,9 @@ def train(
             loss = model.loss(preds, targets, size_average=True)
             loss.backward()
             optimizer.step(lr=lr, counts=counts)
+            if data_index <= 5 and epoch==0:
+                print(thread_id, i_batch, 'after update', model.lt.weight.data[inputs[0][:3]])
+                data_index += 1
             epoch_loss[i_batch] = loss.cpu().item()
         LOSS[epoch] = th.mean(epoch_loss).item()
         log.info('json_stats: {'

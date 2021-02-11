@@ -25,7 +25,8 @@ class HalfspaceManifold(Manifold):
     def to_poincare_ball(self, u):
         d = u.size(-1)
         uu = th.zeros(u.size(0), d + 1)
-        uu = uu.cuda() if th.cuda.is_available()
+        if u.is_cuda:
+            uu = uu.cuda()
         squnom = th.sum(th.pow(u, 2), dim=-1)  # n
         uu[..., 0] = th.div(th.ones_like(u[..., -1]), u[..., -1]) + th.div(squnom, 4 * u[..., -1])  # n
         uu[..., 1] = th.div(th.ones_like(u[..., -1]), u[..., -1]) - th.div(squnom, 4 * u[..., -1])  # n
