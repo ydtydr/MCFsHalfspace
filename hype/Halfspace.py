@@ -48,14 +48,14 @@ class HalfspaceManifold(Manifold):
         return w
 
     def init_weights(self, w, irange=1e-5):
-        th.manual_seed(42)
+        th.manual_seed(40)
         w.data.zero_()
         #########
         d = w.size(-1)
         w.data[...,:-1].uniform_(-irange, irange)
         w.data[...,-1] = 1.0 + irange * 2 * (th.rand_like(w[...,-1])-0.5)
-#         th.save(w, '/HalfspaceTiling/hype/icml_mmiw_h2d.pt')
-#         iw = th.load('/HalfspaceTiling/hype/icml_mmiw_h2d.pt').data
+#         th.save(w, './init_embedding/ns_h2d_s1_v40.pt')
+#         iw = th.load('./init_embedding/vs_h5d_s1_v40.pt').data
 #         w.data.copy_(iw.data)
 
     def rgrad(self, p, d_p):

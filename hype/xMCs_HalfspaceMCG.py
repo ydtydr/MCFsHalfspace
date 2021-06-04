@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import torch as th
 from torch.autograd import Function
-from .common import acosh, Renormalize, Grow_Exp, Addmc
+from .common import acosh, Renormalize, Grow_Exp, Scaling, Addmc, Aggregate
 from .manifold import Manifold
 
-class xMCsHalfspaceManifold(Manifold):
+class xMCsHalfspaceMCGManifold(Manifold):
     __slots__ = ["eps", "_eps", "norm_clip", "max_norm", "debug", "com_n"]
 
     @staticmethod
@@ -41,7 +41,7 @@ class xMCsHalfspaceManifold(Manifold):
         return th.cat([u, v.unsqueeze(-1)], dim=-1)
 
     def distance(self, u, v):
-        dis = xMCsHalfspaceDistance.apply(u, v, self.com_n)
+        dis = xMCsHalfspaceMCGDistance.apply(u, v, self.com_n)
         return dis
 
     def pnorm(self, u):
@@ -55,19 +55,18 @@ class xMCsHalfspaceManifold(Manifold):
         return w
 
     def init_weights(self, w, irange=1e-5):
-        th.manual_seed(42)
+        th.manual_seed(40)
         w.data.zero_()
         d = (w.size(-1)-1)//self.com_n+1
         ############
-#         w.data[...,:d-1].uniform_(-irange, irange)
-#         w.data[...,d-1:-1].zero_()
-#         w.data[...,-1] = 1.0 + irange * 2 * (th.rand_like(w[...,-1])-0.5)
+        w.data[...,:d-1].uniform_(-irange, irange)
+        w.data[...,d-1:-1].zero_()
+        w.data[...,-1] = 1.0 + irange * 2 * (th.rand_like(w[...,-1])-0.5)
         ############
-        iw = th.load('./init_embedding/mm_h2d_s1_v40.pt').data
-        w.data[...,:d-1].copy_(self.normalize(iw.data)[...,:d-1])  
-        w.data[...,-1].copy_(self.normalize(iw.data)[...,-1])
+#         iw = th.load('./init_embedding/vs_h10d_s1_v40.pt').data
+#         w.data[...,:d-1].copy_(self.normalize(iw.data)[...,:d-1])  
+#         w.data[...,-1].copy_(self.normalize(iw.data)[...,-1])
         
-
     def rgrad(self, p, d_p):
         """Euclidean gradient for halfspace"""
         if d_p.is_sparse:
@@ -76,9 +75,21 @@ class xMCsHalfspaceManifold(Manifold):
         else:
             u = d_p
             x = p
-#         d = (x.size(-1)-1)//self.com_n+1
+        d = (x.size(-1)-1)//self.com_n+1
         assert x[...,-1].min()>0.0
-        u.mul_(x[...,-1].unsqueeze(-1))### transform from Euclidean grad to Riemannian grad
+        ##################
+#         u.mul_(x[...,-1].unsqueeze(-1))### transform from Euclidean grad to Riemannian grad
+        ##################
+#         u1 = u * x[...,-1].unsqueeze(-1)
+#         u.data[...,:d-1] = Aggregate(u1[...,:-1], d-1, self.com_n)
+#         u.data[...,d-1] = u1[...,-1]
+#         u.data[...,d:].zero_()
+        ##################
+        u1 = Scaling(u[...,:-1], x[...,-1].unsqueeze(-1), d-1, self.com_n)
+        u.data[...,:d-1] = Aggregate(u1, d-1, self.com_n+1)
+        u.data[...,d-1] = u[...,-1] * x[...,-1]
+        u.data[...,d:].zero_()
+        ##################
         return d_p
 
     def expm(self, p, d_p, lr=None, out=None, normalize=False):
@@ -116,13 +127,8 @@ class xMCsHalfspaceManifold(Manifold):
                 scschs_square = th.pow(th.div(s_postive, th.sinh(s_postive)),2)
                 grad_f_x_pos = (th.div(scoths + Pos[..., -1], scschs_square + r_square) * p_val[...,-1][mask_pos]).unsqueeze(-1) * Pos[...,:-1]
                 growed_x_pos = Grow_Exp(p_val[...,:-1][mask_pos], grad_f_x_pos, d-1, self.com_n)#n*(m+1)(d-1)
-                a = growed_x_pos[...,:self.com_n*(d-1)]
-                b = Renormalize(growed_x_pos, d-1, self.com_n+1)
-                print(a-b)
-                print(th.norm(a-b,dim=-1).max())
-                assert False
 #                 newp_val[..., :-1][mask_pos] = growed_x_pos[...,:self.com_n*(d-1)]#n*m(d-1)
-#                 newp_val[..., :-1][mask_pos] = Renormalize(growed_x_pos, d-1, self.com_n+1)#n*m(d-1)
+                newp_val[..., :-1][mask_pos] = Renormalize(growed_x_pos, d-1, self.com_n+1)#n*m(d-1)
                 newp_val[..., -1][mask_pos] = th.div(s_postive + Pos[..., -1] * th.tanh(s_postive), r_square + th.pow(th.div(Pos[..., -1], th.cosh(s_postive)) ,2)) * th.div(s_postive, th.cosh(s_postive)) * p_val[...,-1][mask_pos]
             if len(Neg) !=0:
                 s_negative = th.norm(Neg, dim=-1)
@@ -134,8 +140,8 @@ class xMCsHalfspaceManifold(Manifold):
                 assert th.isnan(sihncs).max()==0, "sihncs includes NaNs"
                 grad_f_x_neg = th.div(p_val[...,-1][mask_neg], th.div(coshs, sihncs)-Neg[...,-1]).unsqueeze(-1) * Neg[...,:-1]#n*(d-1)
                 growed_x_neg = Grow_Exp(p_val[...,:-1][mask_neg], grad_f_x_neg, d-1, self.com_n)#n*(m+1)(d-1)
-                newp_val[..., :-1][mask_neg] = growed_x_neg[...,:self.com_n*(d-1)]
-#                 newp_val[..., :-1][mask_neg] = Renormalize(growed_x_neg, d-1, self.com_n+1)#n*m(d-1)
+#                 newp_val[..., :-1][mask_neg] = growed_x_neg[...,:self.com_n*(d-1)]
+                newp_val[..., :-1][mask_neg] = Renormalize(growed_x_neg, d-1, self.com_n+1)#n*m(d-1)
                 newp_val[...,-1][mask_neg] = th.div(p_val[...,-1][mask_neg], coshs-Neg[...,-1]*sihncs)#n
             ####################
             newp_val = self.normalize(newp_val)
@@ -144,7 +150,7 @@ class xMCsHalfspaceManifold(Manifold):
         else:
             raise NotImplementedError
 
-class xMCsHalfspaceDistance(Function):
+class xMCsHalfspaceMCGDistance(Function):
     @staticmethod
     def forward(self, u, v, com_n, myeps = 0.0):
         self.com_n = com_n
@@ -157,32 +163,42 @@ class xMCsHalfspaceDistance(Function):
         d = (u.size(-1)-1)//com_n+1
         self.save_for_backward(u, v)
         u_v_x_o = Addmc(u[...,:-1], -v[...,:-1], d-1, self.com_n)
-        u_v_x = u_v_x_o[...,:d-1]
-        for i in range(1, com_n+1, 1):
-            u_v_x += u_v_x_o[...,i*(d-1):(i+1)*(d-1)]
-        self.u_v = th.cat([u_v_x, (u[...,-1]-v[...,-1]).unsqueeze(-1)],-1)
-        sqnorm = th.sum(th.pow(self.u_v, 2), dim=-1)#m*n
-        self.x_ = th.div(sqnorm, 2*u[...,-1]*v[...,-1])#m*n
-        #########
-        self.z_ = th.sqrt(self.x_ * (self.x_ + 2))#m*n
-        return th.log1p(self.x_ + self.z_)
+        u_v_x = Aggregate(u_v_x_o, d-1, com_n)
+        self.sqnorm_x = th.sum(th.pow(u_v_x, 2), dim=-1)#m*n
+        sqnorm = self.sqnorm_x + th.sum(th.pow(u[...,-1:]-v[...,-1:], 2), dim=-1)
+        x_ = th.div(sqnorm, 2*u[...,-1]*v[...,-1])#m*n
+        z_ = th.sqrt(x_ * (x_ + 2))#m*n
+        return th.log1p(x_ + z_)
 
     @staticmethod
     def backward(self, g):
         u, v = self.saved_tensors## u, v are of size b*neg*(com_n*d)
-        self.z_[self.z_==0.0] = th.ones_like(self.z_[self.z_==0.0]) * 1e-6
         d = (u.size(-1)-1)//self.com_n+1
         g = g.unsqueeze(-1).expand_as(u)
         gu = th.zeros_like(u)  ## b*neg*(com_n*d)
         gv = th.zeros_like(v)  ## b*neg*(com_n*d)
         #########
-        auxli_term = th.div(self.u_v, (u[...,-1] * v[...,-1]).unsqueeze(-1))#b*neg*(d)
-        gu[..., :d-1] = th.div(1, self.z_).unsqueeze(-1) * auxli_term[...,:d-1]#b*neg*(d-1)
-        gu[..., d-1] = th.div(1, self.z_) * (auxli_term[...,-1] - th.div(self.x_, u[...,-1]))#b*neg
-        gv[..., :d-1] = -1 * gu[..., :d-1]  #b*neg*(d-1)
-        gv[..., d-1] = th.div(1, self.z_) * (-1 * auxli_term[...,-1] - th.div(self.x_, v[...,-1]))#b*neg
+        constant = th.sqrt((self.sqnorm_x + th.sum(th.pow(u[...,-1:]-v[...,-1:], 2), dim=-1))*(self.sqnorm_x + th.sum(th.pow(u[...,-1:]+v[...,-1:], 2), dim=-1))) #b*neg
+        constant[constant==0.0] = th.ones_like(constant[constant==0.0]) * 1e-6
+#         print(constant.size())
+#         print(Addmc(u[...,:-1], -v[...,:-1], d-1, self.com_n).size())
+        gradient_x = Scaling(Addmc(u[...,:-1], -v[...,:-1], d-1, self.com_n), th.div(2.0, constant), d-1, 2*self.com_n)#b*neg*(com_n+2 * d-1)
+#         print(gradient_x[0,0,:])
+#         print(gradient_x.size())
+#         assert False
+#         gu[..., :d-1] = Aggregate(gradient_x, d-1, self.com_n+2)
+#         gv[..., :d-1] = -1 * gu[..., :d-1]  #b*neg*(d-1)
+#         gu[..., d-1] = th.div(th.pow(u[...,-1], 2) - th.pow(v[...,-1], 2) - self.sqnorm_x, constant * u[...,-1])
+#         gv[..., d-1] = th.div(th.pow(v[...,-1], 2) - th.pow(u[...,-1], 2) - self.sqnorm_x, constant * v[...,-1])
+#         ###============
+#         gu[..., :-1] = gradient_x[..., :self.com_n*(d-1)]
+        gu[..., :-1] = Renormalize(gradient_x, d-1, 2*self.com_n+1)[..., :self.com_n*(d-1)]
+#         print(gu[..., :-1][0,0,:])
+#         gu[..., :-1] = Renormalize(Renormalize(gradient_x, d-1, self.com_n+2), d-1, self.com_n+1)
+        gv[..., :-1] = -1 * gu[..., :-1]  #b*neg*(d-1)
+        gu[..., -1] = th.div(th.pow(u[...,-1], 2) - (th.pow(v[...,-1], 2) + self.sqnorm_x), constant * u[...,-1])
+        gv[..., -1] = th.div(th.pow(v[...,-1], 2) - (th.pow(u[...,-1], 2) + self.sqnorm_x), constant * v[...,-1])
         assert th.isnan(gu).max() == 0, "gu includes NaNs"
-        assert th.isnan(gv).max() == 0, "gv includes NaNs"        
+        assert th.isnan(gv).max() == 0, "gv includes NaNs"
         return g * gu, g * gv, None
-    
 

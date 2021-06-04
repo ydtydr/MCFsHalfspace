@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import torch as th
 from torch.autograd import Function
-from .common import acosh, Renormalize, Grow_Exp, Scaling, Addmc
+from .common import acosh, Renormalize, Grow_Exp, Scaling, ScalingV, Addmc
 from .manifold import Manifold
 
 factor_=20
@@ -62,12 +62,12 @@ class MCsHalfspaceManifold(Manifold):
         w.data.zero_()
         d = w.size(-1)//self.com_n
         ############
-        w.data[...,:d-1].uniform_(-irange, irange)
-        w.data[...,-self.com_n] = 1.0 + irange * 2 * (th.rand_like(w[...,-1])-0.5)
+#         w.data[...,:d-1].uniform_(-irange, irange)
+#         w.data[...,-self.com_n] = 1.0 + irange * 2 * (th.rand_like(w[...,-1])-0.5)
         ############
-#         iw = th.load('/HalfspaceTiling/hype/icml_mmiw_h2d.pt').data
-#         w.data[...,:d-1].copy_(self.normalize(iw.data)[...,:d-1])  
-#         w.data[...,-self.com_n].copy_(self.normalize(iw.data)[...,-1])
+        iw = th.load('./init_embedding/mm_h2d_s1_v40.pt').data
+        w.data[...,:d-1].copy_(self.normalize(iw.data)[...,:d-1])
+        w.data[...,-self.com_n].copy_(self.normalize(iw.data)[...,-1])
 
     def rgrad(self, p, d_p):
         """Euclidean gradient for halfspace"""
@@ -127,8 +127,9 @@ class MCsHalfspaceManifold(Manifold):
                 scschs_square = th.pow(th.div(s_postive, th.sinh(s_postive)),2)
                 grad_f_x_pos = (th.div(scoths + Pos[..., -1], scschs_square + r_square) * xn[mask_pos]).unsqueeze(-1) * Pos[...,:-1]
                 growed_x_pos = Grow_Exp(p_val[...,:-self.com_n][mask_pos], grad_f_x_pos, d-1, self.com_n)#n*(m+1)(d-1)
-                newp_val[..., :-self.com_n][mask_pos] = Renormalize(growed_x_pos, d-1, self.com_n+1)#n*m(d-1)
-                scaled_y_pos = Scaling(p_val[..., -self.com_n:][mask_pos], th.div(s_postive + Pos[..., -1] * th.tanh(s_postive), r_square + th.pow(th.div(Pos[..., -1], th.cosh(s_postive)) ,2)) * th.div(s_postive, th.cosh(s_postive)))#n*(m+1)
+                newp_val[..., :-self.com_n][mask_pos] = growed_x_pos[...,:self.com_n*(d-1)]#n*m(d-1)
+#                 newp_val[..., :-self.com_n][mask_pos] = Renormalize(growed_x_pos, d-1, self.com_n+1)#n*m(d-1)
+                scaled_y_pos = ScalingV(p_val[..., -self.com_n:][mask_pos], th.div(s_postive + Pos[..., -1] * th.tanh(s_postive), r_square + th.pow(th.div(Pos[..., -1], th.cosh(s_postive)) ,2), ) * th.div(s_postive, th.cosh(s_postive)))#n*(m+1)
                 newp_val[...,-self.com_n:][mask_pos] = Renormalize(scaled_y_pos, 1, self.com_n+1)#n*m(d-1)  
             if len(Neg) !=0:
                 s_negative = th.norm(Neg, dim=-1)
@@ -138,8 +139,9 @@ class MCsHalfspaceManifold(Manifold):
                 sihncs[zeros_mask] = th.ones_like(sihncs[th.isnan(sihncs)])
                 grad_f_x_neg = th.div(xn[mask_neg], th.div(coshs, sihncs)-Neg[...,-1]).unsqueeze(-1) * Neg[...,:-1]#n*(d-1)
                 growed_x_neg = Grow_Exp(p_val[...,:-self.com_n][mask_neg], grad_f_x_neg, d-1, self.com_n)#n*(m+1)(d-1)
-                newp_val[..., :-self.com_n][mask_neg] = Renormalize(growed_x_neg, d-1, self.com_n+1)#n*m(d-1)
-                scaled_y_neg = Scaling(p_val[..., -self.com_n:][mask_neg], th.div(1.0, coshs-Neg[...,-1]*sihncs))#n*(m+1)
+                newp_val[..., :-self.com_n][mask_neg] = growed_x_neg[...,:self.com_n*(d-1)]
+#                 newp_val[..., :-self.com_n][mask_neg] = Renormalize(growed_x_neg, d-1, self.com_n+1)#n*m(d-1)
+                scaled_y_neg = ScalingV(p_val[..., -self.com_n:][mask_neg], th.div(1.0, coshs-Neg[...,-1]*sihncs))#n*(m+1)
                 newp_val[...,-self.com_n:][mask_neg] = Renormalize(scaled_y_neg, 1, self.com_n+1)#n*m(d-1)
             ##################
             newp_val = self.normalize(newp_val)

@@ -13,14 +13,15 @@ from hype.Euclidean import EuclideanManifold
 from hype.Poincare import PoincareManifold
 from hype.Lorentz import LorentzManifold
 # from hype.Halfspace import HalfspaceManifold
-from hype.NLorentz import NLorentzManifold
+# from hype.NLorentz import NLorentzManifold
 from hype.LTiling_rsgd import LTilingRSGDManifold
-from hype.NLTiling_rsgd import NLTilingRSGDManifold
-from hype.LTiling_sgd import LTilingSGDManifold
+# from hype.NLTiling_rsgd import NLTilingRSGDManifold
+# from hype.LTiling_sgd import LTilingSGDManifold
 from hype.HTiling_rsgd import HTilingRSGDManifold
 from hype.Halfspace import HalfspaceManifold
-from hype.MCs_Halfspace import MCsHalfspaceManifold
-from hype.xMCs_Halfspace import xMCsHalfspaceManifold
+# from hype.MCs_Halfspace import MCsHalfspaceManifold
+# from hype.xMCs_Halfspace import xMCsHalfspaceManifold
+from hype.xMCs_HalfspaceMCG import xMCsHalfspaceMCGManifold
 
 import sys
 import json
@@ -36,14 +37,15 @@ MANIFOLDS = {
     'Euclidean': EuclideanManifold,
     'Poincare': PoincareManifold,
     'Lorentz': LorentzManifold,
-    'NLorentz': NLorentzManifold,
+#     'NLorentz': NLorentzManifold,
     'LTiling_rsgd': LTilingRSGDManifold,
-    'NLTiling_rsgd': NLTilingRSGDManifold,
-    'LTiling_sgd': LTilingSGDManifold,
+#     'NLTiling_rsgd': NLTilingRSGDManifold,
+#     'LTiling_sgd': LTilingSGDManifold,
     'HTiling_rsgd': HTilingRSGDManifold,
     'Halfspace': HalfspaceManifold,
-    'MCsHalfspace': MCsHalfspaceManifold,
-    'xMCsHalfspace': xMCsHalfspaceManifold
+#     'MCsHalfspace': MCsHalfspaceManifold,
+#     'xMCsHalfspace': xMCsHalfspaceManifold,
+    'xMCsHalfspaceMCG': xMCsHalfspaceMCGManifold
 }
 
 
@@ -88,7 +90,7 @@ def main():
                         help='Run evaluation every n-th epoch')
     parser.add_argument('-debug', action='store_true', default=False,
                         help='Print debuggin output')
-    parser.add_argument('-gpu', default=0, type=int,
+    parser.add_argument('-gpu', default=-1, type=int,
                         help='Which GPU to run on (-1 for no gpu)')
     parser.add_argument('-sym', action='store_true', default=False,
                         help='Symmetrize dataset')
@@ -124,7 +126,7 @@ def main():
     # set default tensor type
     th.set_default_tensor_type('torch.DoubleTensor')####FloatTensor DoubleTensor
     # set device
-    device = th.device(f'cuda:{opt.gpu}' if opt.gpu >= 0 else 'cpu')
+    device = th.device(f'cuda:0' if th.cuda.is_available() else 'cpu')
 #     device = th.device('cpu')
 
     # select manifold to optimize on

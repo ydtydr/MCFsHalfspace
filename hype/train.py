@@ -10,14 +10,15 @@ from hype.graph import eval_reconstruction
 from hype.Euclidean import EuclideanManifold
 from hype.Poincare import PoincareManifold
 from hype.Lorentz import LorentzManifold
-from hype.NLorentz import NLorentzManifold
+# from hype.NLorentz import NLorentzManifold
 from hype.LTiling_rsgd import LTilingRSGDManifold
-from hype.NLTiling_rsgd import NLTilingRSGDManifold
-from hype.LTiling_sgd import LTilingSGDManifold
+# from hype.NLTiling_rsgd import NLTilingRSGDManifold
+# from hype.LTiling_sgd import LTilingSGDManifold
 from hype.HTiling_rsgd import HTilingRSGDManifold
 from hype.Halfspace import HalfspaceManifold
-from hype.MCs_Halfspace import MCsHalfspaceManifold
-from hype.xMCs_Halfspace import xMCsHalfspaceManifold
+# from hype.MCs_Halfspace import MCsHalfspaceManifold
+# from hype.xMCs_Halfspace import xMCsHalfspaceManifold
+from hype.xMCs_HalfspaceMCG import xMCsHalfspaceMCGManifold
 
 # import matplotlib
 # matplotlib.use('Agg')
@@ -27,14 +28,15 @@ MANIFOLDS = {
     'Euclidean': EuclideanManifold,
     'Poincare': PoincareManifold,
     'Lorentz': LorentzManifold,
-    'NLorentz': NLorentzManifold,
+#     'NLorentz': NLorentzManifold,
     'LTiling_rsgd': LTilingRSGDManifold,
-    'NLTiling_rsgd': NLTilingRSGDManifold,
-    'LTiling_sgd': LTilingSGDManifold,
+#     'NLTiling_rsgd': NLTilingRSGDManifold,
+#     'LTiling_sgd': LTilingSGDManifold,
     'HTiling_rsgd': HTilingRSGDManifold,
     'Halfspace': HalfspaceManifold,
-    'MCsHalfspace': MCsHalfspaceManifold,
-    'xMCsHalfspace': xMCsHalfspaceManifold
+#     'MCsHalfspace': MCsHalfspaceManifold,
+#     'xMCsHalfspace': xMCsHalfspaceManifold,
+    'xMCsHalfspaceMCG': xMCsHalfspaceMCGManifold
 }
 
 

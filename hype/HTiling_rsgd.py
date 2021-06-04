@@ -199,6 +199,8 @@ class HalfspaceRieDistance(Function):
         gu = th.zeros_like(u)  # m*n*(2d+1)
         gv = th.zeros_like(v)  # m*n*(2d+1)
         if not self.AvOverflow:
+            self.inside_log_1[self.inside_log_1==0.0] = th.ones_like(self.inside_log_1[self.inside_log_1==0.0]) * 1e-6
+            self.inside_log_2[self.inside_log_2==0.0] = th.ones_like(self.inside_log_2[self.inside_log_2==0.0]) * 1e-6
             auxli_term1 = th.div(th.ones_like(self.inside_log_1), self.inside_log_1+self.inside_log_2)\
                           *(2**(self.j1-self.j2-1)+th.div(2**(2*(self.j1-self.j2-1))*self.Xprime
                                                           + 2**(self.j1-self.j2-1), self.inside_log_2)) #m*n
